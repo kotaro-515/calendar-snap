@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Snap - AIカレンダー予定自動登録</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="画像から予定情報をAIが自動解析し、Googleカレンダーにワンクリックで登録できる便利なツール。ドラッグ＆ドロップだけで簡単スケジュール登録。">
+  <meta name="author" content="Antigravity">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Custom Style -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="header-container">
+      <div class="logo-section">
+        <h1>
+          <i data-lucide="calendar-days" style="color: var(--accent-primary);"></i>
+          Calendar Snap
+        </h1>
+        <p>AI Schedule Assistant</p>
+      </div>
+      
+      <div class="auth-section">
+        <!-- 未ログイン状態のUI -->
+        <button id="btn-login" class="btn btn-google">
+          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48" style="margin-right: 8px;">
+            <g>
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+              <path fill="#4285F4" d="M46.5 24c0-1.63-.15-3.2-.43-4.75H24v9h12.75C36.19 31.25 31.7 35 24 35c-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48c12.75 0 23.01-10.25 23.01-23z"></path>
+              <path fill="#FBBC05" d="M10.54 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.98-6.19z"></path>
+              <path fill="#34A853" d="M24 38.5c-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48c6.47 0 11.9-2.38 15.91-6.45l-6.85-6.85c-2.5 1.6-5.67 2.3-9.06 2.3z"></path>
+            </g>
+          </svg>
+          Googleでログイン
+        </button>
+
+        <!-- ログイン済状態のUI (初期非表示) -->
+        <div id="user-info" class="user-profile" style="display: none;">
+          <img id="user-avatar" class="user-avatar" src="" alt="avatar">
+          <span id="user-name" class="user-name">ユーザー名</span>
+          <button id="btn-logout" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; border-radius: 20px; margin-left: 8px;">
+            ログアウト
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+    
+    <!-- 左パネル: 画像ドラッグ＆ドロップ -->
+    <section class="panel">
+      <h2 class="panel-title">
+        <i data-lucide="image-plus" style="color: var(--accent-secondary);"></i>
+        予定画像のアップロード
+      </h2>
+
+      <!-- 1. 未ログイン時の案内 -->
+      <div id="auth-alert" class="info-box">
+        <div class="info-box-icon">👤</div>
+        <div class="info-box-content">
+          <h4>Googleログインが必要です</h4>
+          <p>はじめに、右上のボタンからGoogleアカウントでログインを行ってください。</p>
+        </div>
+      </div>
+
+      <!-- 2. ログイン済み、カレンダー未連携（認可前）の案内 (初期非表示) -->
+      <div id="grant-alert" class="info-box" style="display: none; background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
+        <div class="info-box-icon" style="color: var(--accent-primary);">🗓️</div>
+        <div class="info-box-content" style="width: 100%;">
+          <h4>Googleカレンダー連携の許可（APIアクセス許可）</h4>
+          <p>本アプリがカレンダーに予定を自動追加（API連携）して良いか、アクセスの許可をお願いします。</p>
+          <button id="btn-grant-calendar" class="btn btn-primary" style="margin-top: 0.75rem; width: 100%; font-size: 0.9rem; padding: 0.6rem 1rem;">
+            <i data-lucide="shield-check"></i>
+            カレンダーへのAPI連携を許可する
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. カレンダー連携完了時の案内 (初期非表示) -->
+      <div id="ready-alert" class="info-box" style="display: none; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+        <div class="info-box-icon" style="color: var(--success);">✅</div>
+        <div class="info-box-content">
+          <h4>Googleカレンダー連携完了</h4>
+          <p>準備が整いました。以下のエリアに予定画像をドラッグ＆ドロップして解析を開始してください！</p>
+        </div>
+      </div>
+
+      <!-- 4. APIキー設定エラー (サーバーエラーなど) (初期非表示) -->
+      <div id="config-alert" class="info-box error" style="display: none;">
+        <div class="info-box-icon">⚙️</div>
+        <div class="info-box-content">
+          <h4>バックエンドの起動または設定が必要です</h4>
+          <p>バックエンドサーバーが正しく設定されていないか、起動していません。</p>
+          <ul>
+            <li>サーバーが <code>npm start</code> で起動しているか確認してください。</li>
+            <li>サーバー直下の <code>.env</code> ファイルに必要なキーが正しく記述されているか確認してください。</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ドロップゾーン -->
+      <div id="drop-zone" class="drop-zone">
+        <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+        <div class="drop-zone-icon">
+          <i data-lucide="cloud-upload" style="width: 32px; height: 32px;"></i>
+        </div>
+        <p class="prompt" id="drop-prompt">画像をドラッグ＆ドロップ</p>
+        <p class="sub" id="drop-sub">またはタップしてファイル・カメラを選択</p>
+        <p class="sub" style="font-size: 0.75rem;">対応形式: PNG, JPEG, WEBP (最大5MB)</p>
+      </div>
+
+      <!-- 画像プレビューエリア (初期非表示) -->
+      <div id="preview-container" class="preview-container">
+        <img id="preview-image" class="preview-image" src="" alt="Preview">
+        <button id="btn-remove-image" class="btn-remove-image" title="画像を削除">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <!-- ローディング表示 (初期非表示) -->
+      <div id="loader" class="loader-container">
+        <div class="loader-glow">
+          <div class="loader-inner">
+            <i data-lucide="sparkles" style="animation: pulse-ring 2s infinite;"></i>
+          </div>
+        </div>
+        <div class="loading-text">AIが画像から予定を解析しています...</div>
+      </div>
+    </section>
+
+    <!-- 右パネル: カレンダーイベントプレビュー & 登録 -->
+    <section class="panel">
+      <h2 class="panel-title">
+        <i data-lucide="calendar" style="color: var(--accent-primary);"></i>
+        カレンダー予定の確認・登録
+      </h2>
+
+      <form id="event-form" style="display: flex; flex-direction: column; gap: 1.25rem;" onsubmit="return false;">
+        <!-- タイトル -->
+        <div class="form-group">
+          <label for="event-title">予定タイトル</label>
+          <input type="text" id="event-title" placeholder="（例）AIシンポジウム2026" required disabled>
+        </div>
+
+        <!-- 日時グリッド -->
+        <div class="datetime-grid">
+          <div class="form-group">
+            <label for="event-start-date">開始日</label>
+            <input type="date" id="event-start-date" required disabled>
+          </div>
+          <div class="form-group">
+            <label for="event-start-time">開始時刻</label>
+            <input type="time" id="event-start-time" required disabled>
+          </div>
+        </div>
+
+        <div class="datetime-grid">
+          <div class="form-group">
+            <label for="event-end-date">終了日</label>
+            <input type="date" id="event-end-date" required disabled>
+          </div>
+          <div class="form-group">
+            <label for="event-end-time">終了時刻</label>
+            <input type="time" id="event-end-time" required disabled>
+          </div>
+        </div>
+
+        <!-- 場所 -->
+        <div class="form-group">
+          <label for="event-location">場所</label>
+          <input type="text" id="event-location" placeholder="（例）東京国際フォーラム / オンラインZoom" disabled>
+        </div>
+
+        <!-- 説明・詳細 -->
+        <div class="form-group">
+          <label for="event-description">説明・詳細</label>
+          <textarea id="event-description" placeholder="（例）イベント概要、参加URL、持ち物など" disabled></textarea>
+        </div>
+
+        <!-- アクションボタン -->
+        <button id="btn-add-calendar" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" disabled>
+          <i data-lucide="calendar-plus"></i>
+          Googleカレンダーに追加する
+        </button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- フッター -->
+  <footer>
+    <p>&copy; 2026 Calendar Snap. Powered by Gemini 2.5 Flash & Google Calendar API.</p>
+  </footer>
+
+  <!-- Lucide Icons 読み込み & 実行 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- フロントエンドJSモジュール -->
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>

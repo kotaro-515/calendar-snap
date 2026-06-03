@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google アカウントでログイン (模擬)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0b0c10;
+      --bg-card: rgba(22, 24, 30, 0.8);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #8b5cf6;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 背景のグラデーション球 */
+    body::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: -10%;
+      width: 50%;
+      height: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    
+    .logo-container {
+      margin-bottom: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .google-logo {
+      display: flex;
+      gap: 2px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    
+    .google-logo span:nth-child(1) { color: #4285F4; }
+    .google-logo span:nth-child(2) { color: #EA4335; }
+    .google-logo span:nth-child(3) { color: #FBBC05; }
+    .google-logo span:nth-child(4) { color: #4285F4; }
+    .google-logo span:nth-child(5) { color: #34A853; }
+    .google-logo span:nth-child(6) { color: #EA4335; }
+    
+    .badge {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    p.subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+    
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    
+    .user-item:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #8b5cf6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: white;
+    }
+    
+    .user-details {
+      flex: 1;
+    }
+    
+    .user-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.1rem;
+    }
+    
+    .user-email {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    
+    .footer-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    
+    .footer-text a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="logo-container">
+      <div class="google-logo">
+        <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+      </div>
+      <div class="badge">MOCK MODE</div>
+    </div>
+    
+    <h1>アカウントの選択</h1>
+    <p class="subtitle"><strong>Calendar Snap</strong> に移動して、AIカレンダー自動登録機能を利用します</p>
+    
+    <div class="user-list">
+      <!-- テスト用ダミーアカウント -->
+      <div class="user-item" onclick="login('Test User', 'test@example.com', 'T')">
+        <div class="avatar" style="background: #8b5cf6;">T</div>
+        <div class="user-details">
+          <div class="user-name">テスト ユーザー</div>
+          <div class="user-email">test@example.com</div>
+        </div>
+      </div>
+      
+      <div class="user-item" onclick="login('ゲストユーザー', 'guest@example.com', 'G')">
+        <div class="avatar" style="background: #06b6d4;">G</div>
+        <div class="user-details">
+          <div class="user-name">ゲスト ユーザー</div>
+          <div class="user-email">guest@example.com</div>
+        </div>
+      </div>
+    </div>
+    
+    <p class="footer-text">
+      これは完全ローカルの模擬ログイン画面です。<br>
+      実際のGoogleアカウントのパスワード入力や認証は行われません。
+    </p>
+  </div>
+
+  <script>
+    function login(name, email, initial) {
+      // 模擬ログインパラメータを伴ってコールバックへ遷移
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUri = '/auth/google/callback';
+      
+      const targetUrl = `${redirectUri}?code=mock_code_for_${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`;
+      window.location.href = targetUrl;
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google アカウントでのアクセス許可 (模擬)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0b0c10;
+      --bg-card: rgba(22, 24, 30, 0.8);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #8b5cf6;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #10b981;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 背景グラデーション球 */
+    body::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: -10%;
+      width: 50%;
+      height: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    
+    .logo-container {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    
+    .google-logo {
+      display: flex;
+      gap: 2px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    
+    .google-logo span:nth-child(1) { color: #4285F4; }
+    .google-logo span:nth-child(2) { color: #EA4335; }
+    .google-logo span:nth-child(3) { color: #FBBC05; }
+    .google-logo span:nth-child(4) { color: #4285F4; }
+    .google-logo span:nth-child(5) { color: #34A853; }
+    .google-logo span:nth-child(6) { color: #EA4335; }
+    
+    .badge {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      line-height: 1.4;
+    }
+    
+    .scope-box {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    
+    .scope-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+    }
+    
+    .scope-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .scope-icon {
+      color: var(--accent);
+      font-size: 1.1rem;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+      color: #0b0c10;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+    
+    .footer-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="logo-container">
+      <div class="google-logo">
+        <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+      </div>
+      <div class="badge">MOCK MODE</div>
+    </div>
+    
+    <h1>Calendar Snap が Google アカウントへのアクセスをリクエストしています</h1>
+    
+    <div class="scope-box">
+      <div class="scope-title">許可するアクセス権</div>
+      <div class="scope-item">
+        <span class="scope-icon">📅</span>
+        <div>
+          <strong>Google カレンダーのイベントの表示、編集、共有、完全な削除</strong>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+            このアプリが予定画像から自動生成したスケジュールをカレンダーへ直接追加するために使用します。
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button class="btn btn-secondary" onclick="cancel()">キャンセル</button>
+      <button class="btn btn-primary" onclick="grant()">アクセスを許可する</button>
+    </div>
+    
+    <p class="footer-text">
+      ※これは完全ローカルの模擬確認画面です。<br>
+      実際のGoogleカレンダーアカウントに影響を与えることはありません。
+    </p>
+  </div>
+
+  <script>
+    function grant() {
+      // カレンダー追加権限（スコープ）を伴う模擬コールバック
+      const redirectUri = '/auth/google/callback';
+      window.location.href = `${redirectUri}?code=mock_code_granted_with_calendar`;
+    }
+    
+    function cancel() {
+      window.location.href = '/?error=access_denied';
+    }
+  </script>
+
+</body>
+</html>
