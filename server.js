@@ -406,8 +406,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// サーバー起動 (ローカル開発時のみ listen)
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+// サーバー起動
+if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {
     console.log(`===================================================`);
     console.log(` Calendar Snap サーバー起動完了！                  `);
