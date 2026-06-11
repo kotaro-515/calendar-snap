@@ -240,7 +240,7 @@ app.post('/api/analyze', async (req, res) => {
   try {
     // Gemini APIクライアントの初期化
     const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const now = new Date();
     const currentYear = now.getFullYear();
