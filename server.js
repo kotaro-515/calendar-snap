@@ -3,7 +3,7 @@
 // ==========================================
 
 import express from 'express';
-import session from 'express-session';
+import cookieSession from 'cookie-session';
 import { google } from 'googleapis';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import cors from 'cors';
@@ -18,6 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1); // プロキシ環境（Vercelなど）でセッションCookieを動作させるために必要
 const PORT = process.env.PORT || 3000;
 
 // ミドルウェアの設定
@@ -25,15 +26,14 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // 画像送信用に制限を緩和
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// セッション管理の設定 (メモリセッション)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'super_secret_calendar_snap_session_key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // 本番HTTPS環境では true に設定
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30日間
-  }
+// セッション管理の設定 (Cookieベースのセッションでサーバーレスに対応)
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'super_secret_calendar_snap_session_key_2026'],
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30日間
+  secure: process.env.NODE_ENV === 'production', // Vercel(本番環境)ではHTTPSのためtrue、ローカルではfalse
+  sameSite: 'lax',
+  httpOnly: true
 }));
 
 // 静的ファイルの提供 (フロントエンド)
@@ -215,12 +215,8 @@ app.get('/auth/status', (req, res) => {
 
 // ログアウト処理
 app.get('/auth/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Session destroy error:', err);
-    }
-    res.redirect('/');
-  });
+  req.session = null;
+  res.redirect('/');
 });
 
 // ==========================================
@@ -367,7 +363,9 @@ app.post('/api/calendar/add', async (req, res) => {
         ...req.session.tokens,
         ...newTokens
       };
-      req.session.save(); // セッション変更を即座に確定
+      if (typeof req.session.save === 'function') {
+        req.session.save(); // セッション変更を即座に確定
+      }
     });
     
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
