@@ -317,13 +317,13 @@ app.post('/api/analyze', async (req, res) => {
       }
     });
     
-    const jsonText = response.text();
+    const jsonText = response.response.text();
     const parsedData = JSON.parse(jsonText.trim());
     
     res.json(parsedData);
   } catch (error) {
     console.error('Gemini Analysis Server Error:', error);
-    res.status(500).json({ error: 'AIによる予定の解析に失敗しました。画像が鮮明であることを確認してください。' });
+    res.status(500).json({ error: error.message || 'AIによる予定の解析に失敗しました。' });
   }
 });
 
