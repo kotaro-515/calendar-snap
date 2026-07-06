@@ -281,16 +281,21 @@ app.post('/api/analyze', async (req, res) => {
 - 時刻の記載が全くない → 開始「09:00」、終了「10:00」
 
 ## 出力形式
-マークダウンやコードブロックを一切含めず、以下の純粋なJSONのみを返す：
+マークダウンやコードブロックを一切含めず、以下の純粋なJSONのみを返す。
+予定が1件でも複数でも、必ずevents配列形式で返す：
 
 {
-  "summary": "予定のタイトル",
-  "location": "場所",
-  "description": "説明文",
-  "startDate": "YYYY-MM-DD",
-  "startTime": "HH:MM",
-  "endDate": "YYYY-MM-DD",
-  "endTime": "HH:MM"
+  "events": [
+    {
+      "summary": "予定のタイトル",
+      "location": "場所",
+      "description": "説明文",
+      "startDate": "YYYY-MM-DD",
+      "startTime": "HH:MM",
+      "endDate": "YYYY-MM-DD",
+      "endTime": "HH:MM"
+    }
+  ]
 }`;
 
     // Geminiへリクエスト送信
@@ -319,8 +324,9 @@ app.post('/api/analyze', async (req, res) => {
     
     const jsonText = response.response.text();
     const parsedData = JSON.parse(jsonText.trim());
-    
-    res.json(parsedData);
+    const events = parsedData.events || [parsedData];
+
+    res.json({ events });
   } catch (error) {
     console.error('Gemini Analysis Server Error:', error);
     res.status(500).json({ error: error.message || 'AIによる予定の解析に失敗しました。' });

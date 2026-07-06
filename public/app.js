@@ -1,8 +1,7 @@
 // ==========================================
-// Calendar Snap - Frontend Logic (Express連携版)
+// Calendar Snap - Frontend Logic
 // ==========================================
 
-// 状態管理
 const state = {
   isAuthenticated: false,
   isCalendarGranted: false,
@@ -10,30 +9,36 @@ const state = {
   user: null,
   selectedImageBase64: null,
   selectedImageMimeType: null,
-  currentYear: new Date().getFullYear() // 2026年
+  currentEvents: [],
+  analysisError: false,
+  totalRegistered: parseInt(localStorage.getItem('cs_total') || '0')
 };
 
-// UIエレメントの取得
 const el = {
   btnLogin: document.getElementById('btn-login'),
   userInfo: document.getElementById('user-info'),
   userAvatar: document.getElementById('user-avatar'),
   userName: document.getElementById('user-name'),
   btnLogout: document.getElementById('btn-logout'),
-  
   authAlert: document.getElementById('auth-alert'),
   grantAlert: document.getElementById('grant-alert'),
   readyAlert: document.getElementById('ready-alert'),
   btnGrantCalendar: document.getElementById('btn-grant-calendar'),
   configAlert: document.getElementById('config-alert'),
-  
   dropZone: document.getElementById('drop-zone'),
   fileInput: document.getElementById('file-input'),
+  cameraInput: document.getElementById('camera-input'),
+  btnOpenFile: document.getElementById('btn-open-file'),
+  btnOpenCamera: document.getElementById('btn-open-camera'),
   previewContainer: document.getElementById('preview-container'),
   previewImage: document.getElementById('preview-image'),
   btnRemoveImage: document.getElementById('btn-remove-image'),
   loader: document.getElementById('loader'),
-  
+  loadingText: document.getElementById('loading-text'),
+  loadingProgress: document.getElementById('loading-progress'),
+  retryArea: document.getElementById('retry-area'),
+  btnRetry: document.getElementById('btn-retry'),
+  eventsList: document.getElementById('events-list'),
   eventForm: document.getElementById('event-form'),
   eventTitle: document.getElementById('event-title'),
   eventStartDate: document.getElementById('event-start-date'),
@@ -43,371 +48,374 @@ const el = {
   eventLocation: document.getElementById('event-location'),
   eventDescription: document.getElementById('event-description'),
   btnAddCalendar: document.getElementById('btn-add-calendar'),
-  toastContainer: document.getElementById('toast-container')
+  toastContainer: document.getElementById('toast-container'),
+  historySection: document.getElementById('history-section'),
+  historyList: document.getElementById('history-list'),
+  btnClearHistory: document.getElementById('btn-clear-history')
 };
 
-// ==========================================
-// 1. 初期化処理 & 認証状態チェック
-// ==========================================
+const LOADING_TIPS = [
+  '🔍 AIが画像を読み込んでいます...',
+  '🧠 テキストをじっくり解析中...',
+  '📅 予定の日時を探しています...',
+  '🤖 もう少しだけ待ってね！',
+  '☕ AIが頑張ってます。コーヒーでも...',
+  '✨ 予定情報を整理しています...',
+  '🎯 もうすぐ完了します！',
+];
+
+let loadingTimers = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // Lucideアイコンの初期化
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-  
-  // イベントリスナーの登録
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   setupEventListeners();
-  
-  // サーバーの認証状態をチェック
   await checkAuthStatus();
+  renderHistory();
+  updateCounter();
 });
 
-// バックエンドから認証ステータスを取得し、UIを更新
+// ==========================================
+// 1. 認証状態チェック
+// ==========================================
 async function checkAuthStatus() {
   try {
     const res = await fetch('/auth/status');
     if (!res.ok) throw new Error('Status check failed');
-    
     const data = await res.json();
-    
-    // サーバーの環境変数が設定されていない場合
+
     if (data.configured === false) {
       el.configAlert.style.display = 'flex';
       el.btnLogin.disabled = true;
       el.btnLogin.style.opacity = '0.5';
-      el.btnLogin.title = 'サーバーの.envファイルに必要なキーが設定されていません';
       return;
     }
-    
+
     state.isAuthenticated = data.isAuthenticated;
     state.isCalendarGranted = data.isCalendarGranted;
     state.isMockAuth = data.isMockAuth;
     state.user = data.user;
-    
     updateAuthUI();
+    updateSteps();
   } catch (error) {
     console.error('Failed to fetch auth status:', error);
-    showToast('サーバーとの通信に失敗しました。サーバーが起動しているか確認してください。', 'error');
+    showToast('サーバーとの通信に失敗しました。', 'error');
     el.configAlert.style.display = 'flex';
   }
 }
 
-// 認証状態に応じたUIの切り替え
 function updateAuthUI() {
   if (state.isAuthenticated) {
-    // ログイン状態：ヘッダーのユーザープロフィール表示
     el.userAvatar.src = state.user.picture || 'https://lh3.googleusercontent.com/a/default-user=s96-c';
-    
-    // 模擬ログインの場合は (MOCK) を付与
     const suffix = state.isMockAuth ? ' (MOCK)' : '';
     el.userName.textContent = (state.user.name || state.user.email) + suffix;
-    
     el.btnLogin.style.display = 'none';
     el.userInfo.style.display = 'flex';
     el.authAlert.style.display = 'none';
-    
+
     if (state.isCalendarGranted) {
-      // カレンダーAPI連携許可済み：ドロップ可能な「準備完了」状態
       el.grantAlert.style.display = 'none';
-      
-      if (state.isMockAuth) {
-        const readyTitle = el.readyAlert.querySelector('h4');
-        const readyDesc = el.readyAlert.querySelector('p');
-        if (readyTitle) readyTitle.textContent = 'ハイブリッド模擬モードで準備完了！';
-        if (readyDesc) readyDesc.innerHTML = 'Google設定なしで動作中です。画像をドロップすると<strong>本物のGemini AI</strong>が予定を解析します。';
-      }
-      
       el.readyAlert.style.display = 'flex';
     } else {
-      // ログイン済みだがカレンダー未連携：許可を求める状態
-      if (state.isMockAuth) {
-        const grantTitle = el.grantAlert.querySelector('h4');
-        const grantDesc = el.grantAlert.querySelector('p');
-        const grantBtn = document.getElementById('btn-grant-calendar');
-        if (grantTitle) grantTitle.textContent = '模擬カレンダー連携の許可';
-        if (grantDesc) grantDesc.textContent = 'カレンダー連携を模擬体験します。実際のGoogleカレンダーには影響を与えませんのでご安心ください。';
-        if (grantBtn) grantBtn.innerHTML = '<i data-lucide="shield-check"></i> 模擬カレンダー連携を許可する';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-      }
-      
       el.grantAlert.style.display = 'flex';
       el.readyAlert.style.display = 'none';
     }
   } else {
-    // 未ログイン状態
     el.btnLogin.style.display = 'inline-flex';
     el.userInfo.style.display = 'none';
-    
-    if (state.isMockAuth) {
-      const authTitle = el.authAlert.querySelector('h4');
-      const authDesc = el.authAlert.querySelector('p');
-      if (authTitle) authTitle.textContent = 'ハイブリッド模擬モードで起動中';
-      if (authDesc) authDesc.innerHTML = 'Google Cloudの設定不要で動作しています。右上の「Googleでログイン」から模擬認証を行い、<strong>本物のAI解析</strong>をお試しください（完全無料）。';
-      
-      el.btnLogin.innerHTML = `
-        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48" style="margin-right: 8px;">
-          <g>
-            <path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-          </g>
-        </svg>
-        Googleでログイン (模擬)
-      `;
-    }
-    
     el.authAlert.style.display = 'flex';
     el.grantAlert.style.display = 'none';
     el.readyAlert.style.display = 'none';
   }
-  
   updateFormDisabledState();
 }
 
 // ==========================================
-// 2. イベントリスナーの設定
+// 2. ステップインジケーター
+// ==========================================
+function updateSteps() {
+  const ids = ['si-1', 'si-2', 'si-3', 'si-4'];
+  const stepItems = ids.map(id => document.getElementById(id)).filter(Boolean);
+  if (!stepItems.length) return;
+
+  stepItems.forEach(s => s.classList.remove('active', 'done'));
+
+  if (!state.isAuthenticated) {
+    stepItems[0].classList.add('active');
+  } else if (!state.isCalendarGranted) {
+    stepItems[0].classList.add('done');
+    stepItems[1].classList.add('active');
+  } else {
+    stepItems[0].classList.add('done');
+    stepItems[1].classList.add('done');
+    stepItems[2].classList.add('active');
+  }
+}
+
+// ==========================================
+// 3. イベントリスナー
 // ==========================================
 function setupEventListeners() {
-  // Googleログインボタン
-  el.btnLogin.addEventListener('click', () => {
-    // バックエンドのログインルートにリダイレクト
-    window.location.href = '/auth/google';
-  });
-  
-  // カレンダーAPI連携許可ボタン
-  el.btnGrantCalendar.addEventListener('click', () => {
-    // バックエンドのカレンダー連携（追加認可）ルートにリダイレクト
-    window.location.href = '/auth/grant';
-  });
-  
-  // ログアウトボタン
-  el.btnLogout.addEventListener('click', () => {
-    // バックエンドのログアウトルートにリダイレクト
-    window.location.href = '/auth/logout';
-  });
-  
-  // ドラッグ＆ドロップイベント
+  el.btnLogin.addEventListener('click', () => window.location.href = '/auth/google');
+  el.btnGrantCalendar.addEventListener('click', () => window.location.href = '/auth/grant');
+  el.btnLogout.addEventListener('click', () => window.location.href = '/auth/logout');
+
   el.dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     el.dropZone.classList.add('dragover');
   });
-  
-  el.dropZone.addEventListener('dragleave', () => {
-    el.dropZone.classList.remove('dragover');
-  });
-  
+  el.dropZone.addEventListener('dragleave', () => el.dropZone.classList.remove('dragover'));
   el.dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     el.dropZone.classList.remove('dragover');
-    
     if (!state.isCalendarGranted) {
-      showToast('画像を解析する前に、GoogleカレンダーのAPI連携を許可してください。', 'warning');
+      showToast('先にカレンダー連携を許可してください 📅', 'warning');
       return;
     }
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleImageSelect(files[0]);
-    }
+    if (e.dataTransfer.files.length > 0) handleImageSelect(e.dataTransfer.files[0]);
   });
-  
-  el.dropZone.addEventListener('click', () => {
+
+  el.dropZone.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-open-file') || e.target.closest('#btn-open-camera')) return;
     if (!state.isCalendarGranted) {
-      showToast('画像を解析する前に、GoogleカレンダーのAPI連携を許可してください。', 'warning');
+      showToast('先にカレンダー連携を許可してください 📅', 'warning');
       return;
     }
     el.fileInput.click();
   });
-  
-  el.fileInput.addEventListener('change', (e) => {
-    const files = e.target.files;
-    if (files.length > 0) {
-      handleImageSelect(files[0]);
+
+  el.btnOpenFile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!state.isCalendarGranted) {
+      showToast('先にカレンダー連携を許可してください 📅', 'warning');
+      return;
     }
+    el.fileInput.click();
   });
-  
-  // 画像削除ボタン
+
+  el.btnOpenCamera.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!state.isCalendarGranted) {
+      showToast('先にカレンダー連携を許可してください 📅', 'warning');
+      return;
+    }
+    el.cameraInput.click();
+  });
+
+  el.fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleImageSelect(e.target.files[0]);
+  });
+  el.cameraInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleImageSelect(e.target.files[0]);
+  });
+
   el.btnRemoveImage.addEventListener('click', (e) => {
     e.stopPropagation();
     resetImage();
   });
-  
-  // カレンダー追加ボタン
+
   el.btnAddCalendar.addEventListener('click', addEventToGoogleCalendar);
+
+  if (el.btnRetry) {
+    el.btnRetry.addEventListener('click', () => {
+      el.retryArea.style.display = 'none';
+      analyzeImage();
+    });
+  }
+
+  if (el.btnClearHistory) {
+    el.btnClearHistory.addEventListener('click', clearHistory);
+  }
 }
 
 // ==========================================
-// 3. 画像処理 & アップロード
+// 4. 画像処理
 // ==========================================
 function handleImageSelect(file) {
   if (!file.type.startsWith('image/')) {
-    showToast('画像ファイルを選択してください。', 'error');
+    showToast('画像ファイルを選択してください 🖼️', 'error');
     return;
   }
-  
   if (file.size > 5 * 1024 * 1024) {
-    showToast('画像サイズは5MB以下にしてください。', 'error');
+    showToast('画像サイズは5MB以下にしてください', 'error');
     return;
   }
-  
+
   const reader = new FileReader();
   reader.onload = (e) => {
     el.previewImage.src = e.target.result;
     el.dropZone.style.display = 'none';
     el.previewContainer.style.display = 'block';
-    
-    // Base64データを抽出
+    if (el.retryArea) el.retryArea.style.display = 'none';
     state.selectedImageBase64 = e.target.result.split(',')[1];
     state.selectedImageMimeType = file.type;
-    
-    // 解析スタート
     analyzeImage();
   };
   reader.readAsDataURL(file);
 }
 
-// 画像の初期化
 function resetImage() {
   state.selectedImageBase64 = null;
   state.selectedImageMimeType = null;
+  state.currentEvents = [];
   el.fileInput.value = '';
+  if (el.cameraInput) el.cameraInput.value = '';
   el.previewImage.src = '';
   el.previewContainer.style.display = 'none';
   el.dropZone.style.display = 'flex';
-  
+  if (el.retryArea) el.retryArea.style.display = 'none';
+  if (el.eventsList) { el.eventsList.style.display = 'none'; el.eventsList.innerHTML = ''; }
   el.eventForm.reset();
   updateFormDisabledState();
 }
 
 // ==========================================
-// 4. バックエンドAPI経由の画像解析 (Gemini AI)
+// 5. AI画像解析
 // ==========================================
 async function analyzeImage() {
   if (!state.selectedImageBase64) return;
-  
-  // UIを「解析中」状態に
+
+  state.analysisError = false;
   el.loader.style.display = 'flex';
-  el.eventForm.style.opacity = '0.5';
-  updateFormDisabledState(true); // すべて一時的に無効化
-  
+  el.eventForm.style.opacity = '0.4';
+  if (el.eventsList) el.eventsList.style.display = 'none';
+  updateFormDisabledState(true);
+  startLoadingAnimation();
+
   try {
     const res = await fetch('/api/analyze', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        image: state.selectedImageBase64,
-        mimeType: state.selectedImageMimeType
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: state.selectedImageBase64, mimeType: state.selectedImageMimeType })
     });
-    
+
     if (!res.ok) {
       const errorData = await res.json();
       throw new Error(errorData.error || '解析リクエストに失敗しました');
     }
-    
+
     const responseData = await res.json();
-    displayParsedEvent(responseData);
-    showToast('AIによる予定の解析が完了しました！', 'success');
+    const events = responseData.events || [responseData];
+    state.currentEvents = events;
+
+    if (events.length === 1) {
+      displayParsedEvent(events[0]);
+      showToast('✨ AIが予定を検出しました！内容を確認してください', 'success');
+    } else {
+      displayEventsList(events);
+      showToast(`✨ ${events.length}件の予定を検出！選んでください`, 'success');
+    }
+
+    const stepItems = document.querySelectorAll('.step-item');
+    if (stepItems[2]) stepItems[2].classList.add('done');
+    if (stepItems[3]) stepItems[3].classList.add('active');
+
   } catch (error) {
     console.error('Analysis Error:', error);
-    showToast(error.message || '画像の解析に失敗しました。画像が鮮明であることを確認してください。', 'error');
+    state.analysisError = true;
+    if (el.retryArea) el.retryArea.style.display = 'block';
+    showToast('解析に失敗しました。再試行してみてください 🔄', 'error');
     updateFormDisabledState();
   } finally {
+    stopLoadingAnimation();
     el.loader.style.display = 'none';
     el.eventForm.style.opacity = '1';
   }
 }
 
-// 解析結果をフォームにセット
+function displayEventsList(events) {
+  el.eventsList.innerHTML = `<p class="events-list-title">📋 検出された予定（${events.length}件） — タップして選択</p>`;
+  events.forEach((event) => {
+    const card = document.createElement('div');
+    card.className = 'event-card';
+    card.innerHTML = `
+      <div class="event-card-info">
+        <div class="event-card-title">${escapeHtml(event.summary || '（タイトルなし）')}</div>
+        <div class="event-card-date">📅 ${event.startDate || ''} ${event.startTime || ''}</div>
+      </div>
+      <button class="event-card-btn">選択</button>
+    `;
+    card.querySelector('.event-card-btn').addEventListener('click', () => {
+      document.querySelectorAll('.event-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      displayParsedEvent(event);
+      showToast('フォームに入力しました。確認してください ✅', 'success');
+    });
+    el.eventsList.appendChild(card);
+  });
+  el.eventsList.style.display = 'flex';
+  el.eventsList.style.flexDirection = 'column';
+  el.eventsList.style.gap = '0.6rem';
+}
+
 function displayParsedEvent(data) {
   el.eventTitle.value = data.summary || '';
   el.eventLocation.value = data.location || '';
   el.eventDescription.value = data.description || '';
-  
   el.eventStartDate.value = data.startDate || '';
   el.eventStartTime.value = data.startTime || '';
   el.eventEndDate.value = data.endDate || data.startDate || '';
   el.eventEndTime.value = data.endTime || '';
-  
   updateFormDisabledState();
 }
 
 // ==========================================
-// 5. バックエンドAPI経由のGoogleカレンダー予定追加
+// 6. Googleカレンダーに追加
 // ==========================================
 async function addEventToGoogleCalendar() {
   if (!state.isCalendarGranted) {
-    showToast('カレンダーに追加するにはGoogleカレンダー連携の許可が必要です。', 'warning');
+    showToast('カレンダー連携を許可してください 📅', 'warning');
     return;
   }
-  
-  // 入力フォームの値の検証
+
   const summary = el.eventTitle.value.trim();
   const location = el.eventLocation.value.trim();
   const description = el.eventDescription.value.trim();
-  
   const startDate = el.eventStartDate.value;
   const startTime = el.eventStartTime.value;
   const endDate = el.eventEndDate.value;
   const endTime = el.eventEndTime.value;
-  
+
   if (!summary || !startDate || !startTime || !endDate || !endTime) {
-    showToast('必須項目（タイトル、日時）を入力してください。', 'error');
+    showToast('タイトルと日時を入力してください', 'error');
     return;
   }
-  
-  const startDt = `${startDate}T${startTime}:00`;
-  const endDt = `${endDate}T${endTime}:00`;
-  
-  // 日時の前後関係をチェック
-  if (new Date(startDt) > new Date(endDt)) {
-    showToast('終了日時は開始日時より後の時間を設定してください。', 'error');
+
+  if (new Date(`${startDate}T${startTime}`) > new Date(`${endDate}T${endTime}`)) {
+    showToast('終了日時は開始日時より後にしてください', 'error');
     return;
   }
 
   el.btnAddCalendar.disabled = true;
-  el.btnAddCalendar.textContent = "カレンダーに追加中...";
-  
+  el.btnAddCalendar.innerHTML = '⏳ 登録中...';
+
   try {
     const res = await fetch('/api/calendar/add', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        summary,
-        location,
-        description,
-        startDate,
-        startTime,
-        endDate,
-        endTime
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ summary, location, description, startDate, startTime, endDate, endTime })
     });
-    
+
     if (!res.ok) {
       const errorData = await res.json();
-      throw new Error(errorData.error || 'カレンダー登録リクエストに失敗しました');
+      throw new Error(errorData.error || '登録リクエストに失敗しました');
     }
-    
+
     const createdEvent = await res.json();
-    const successMsg = state.isMockAuth
-      ? 'カレンダーに予定を模擬登録しました！ 🎉'
-      : 'Googleカレンダーに予定を登録しました！ 🎉';
-    showToast(successMsg, 'success');
-    
-    // カレンダーの直通リンク表示
+
+    launchConfetti();
+    showToast('🎉 カレンダーに登録しました！', 'success');
+    saveToHistory({ summary, location, startDate, startTime, endDate, endTime });
+
     if (createdEvent.htmlLink) {
       setTimeout(() => {
-        const linkText = state.isMockAuth ? '模擬カレンダーで確認する' : 'カレンダーで確認する';
-        showToast(`<a href="${createdEvent.htmlLink}" target="_blank" style="color: var(--accent-secondary); text-decoration: underline;">${linkText}</a>`, 'success');
-      }, 1000);
+        showToast(`<a href="${createdEvent.htmlLink}" target="_blank" style="color:var(--accent-secondary);text-decoration:underline;">📅 カレンダーで確認する →</a>`, 'success');
+      }, 1200);
     }
-    
+
     resetImage();
   } catch (error) {
     console.error('Calendar Add Error:', error);
-    showToast(`追加エラー: ${error.message}`, 'error');
+    showToast(`登録エラー: ${error.message}`, 'error');
   } finally {
     el.btnAddCalendar.disabled = false;
     el.btnAddCalendar.innerHTML = '<i data-lucide="calendar-plus"></i> Googleカレンダーに追加する';
@@ -416,50 +424,161 @@ async function addEventToGoogleCalendar() {
 }
 
 // ==========================================
-// 6. UI制御ユーティリティ
+// 7. 履歴管理
 // ==========================================
+const HISTORY_KEY = 'cs_history';
+const MAX_HISTORY = 10;
 
-// フォームの活性・非活性制御
+function saveToHistory(event) {
+  const history = loadHistoryData();
+  history.unshift({ ...event, addedAt: new Date().toISOString() });
+  if (history.length > MAX_HISTORY) history.pop();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  state.totalRegistered++;
+  localStorage.setItem('cs_total', state.totalRegistered);
+  updateCounter();
+  renderHistory();
+}
+
+function loadHistoryData() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function renderHistory() {
+  const history = loadHistoryData();
+  if (!el.historySection || !el.historyList) return;
+  if (history.length === 0) { el.historySection.style.display = 'none'; return; }
+  el.historySection.style.display = 'block';
+  el.historyList.innerHTML = history.map(item => {
+    const added = new Date(item.addedAt);
+    const dateStr = `${added.getMonth() + 1}/${added.getDate()} ${added.getHours()}:${String(added.getMinutes()).padStart(2, '0')}`;
+    return `
+      <div class="history-item">
+        <div class="history-item-title">${escapeHtml(item.summary)}</div>
+        <div class="history-item-date">📅 ${item.startDate} ${item.startTime}</div>
+        <div class="history-item-added">✓ ${dateStr} に登録</div>
+      </div>`;
+  }).join('');
+}
+
+function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+  showToast('履歴を削除しました', 'success');
+}
+
+// ==========================================
+// 8. 登録カウンター
+// ==========================================
+function updateCounter() {
+  const badge = document.getElementById('counter-badge');
+  if (!badge) return;
+  if (state.totalRegistered === 0) { badge.style.display = 'none'; return; }
+  badge.style.display = 'inline-flex';
+  badge.textContent = `🎯 ${state.totalRegistered}件登録済み`;
+}
+
+// ==========================================
+// 9. ローディングアニメーション
+// ==========================================
+function startLoadingAnimation() {
+  const stepEls = ['step-1', 'step-2', 'step-3', 'step-4'].map(id => document.getElementById(id));
+  let stepIndex = 0;
+  let tipIndex = 0;
+  let progress = 0;
+
+  const progressTimer = setInterval(() => {
+    if (progress < 88) {
+      progress += Math.random() * 7 + 2;
+      if (el.loadingProgress) el.loadingProgress.style.width = `${Math.min(progress, 88)}%`;
+    }
+  }, 450);
+
+  const stepTimer = setInterval(() => {
+    if (stepEls[stepIndex]) stepEls[stepIndex].classList.add('active');
+    if (stepIndex > 0 && stepEls[stepIndex - 1]) stepEls[stepIndex - 1].classList.add('done');
+    if (stepIndex < stepEls.length - 1) stepIndex++;
+  }, 1800);
+
+  const textTimer = setInterval(() => {
+    if (el.loadingText) {
+      el.loadingText.style.opacity = '0';
+      setTimeout(() => {
+        tipIndex = (tipIndex + 1) % LOADING_TIPS.length;
+        if (el.loadingText) { el.loadingText.textContent = LOADING_TIPS[tipIndex]; el.loadingText.style.opacity = '1'; }
+      }, 300);
+    }
+  }, 2200);
+
+  if (el.loadingText) el.loadingText.textContent = LOADING_TIPS[0];
+  loadingTimers = [progressTimer, stepTimer, textTimer];
+}
+
+function stopLoadingAnimation() {
+  loadingTimers.forEach(t => clearInterval(t));
+  loadingTimers = [];
+  ['step-1', 'step-2', 'step-3', 'step-4'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s) s.classList.remove('active', 'done');
+  });
+  setTimeout(() => { if (el.loadingProgress) el.loadingProgress.style.width = '0%'; }, 400);
+}
+
+// ==========================================
+// 10. 紙吹雪アニメーション
+// ==========================================
+function launchConfetti() {
+  const colors = ['#c2410c', '#4d7c0f', '#b45309', '#ea580c', '#15803d', '#d97706', '#7c3aed'];
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;';
+  document.body.appendChild(container);
+
+  if (!document.getElementById('confetti-style')) {
+    const style = document.createElement('style');
+    style.id = 'confetti-style';
+    style.textContent = `@keyframes confetti-fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(105vh) rotate(720deg);opacity:0;}}`;
+    document.head.appendChild(style);
+  }
+
+  for (let i = 0; i < 90; i++) {
+    const piece = document.createElement('div');
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const size = Math.random() * 10 + 5;
+    const isCircle = Math.random() > 0.5;
+    piece.style.cssText = `position:absolute;top:-20px;left:${Math.random() * 100}%;width:${size}px;height:${isCircle ? size : size * 0.5}px;background:${color};border-radius:${isCircle ? '50%' : '2px'};animation:confetti-fall ${Math.random() * 1.5 + 1.5}s ${Math.random() * 0.8}s ease-in forwards;opacity:0.9;`;
+    container.appendChild(piece);
+  }
+  setTimeout(() => container.remove(), 3500);
+}
+
+// ==========================================
+// 11. UI制御ユーティリティ
+// ==========================================
 function updateFormDisabledState(forceDisableAll = false) {
   const isImageLoaded = !!state.selectedImageBase64;
   const isCalendarGranted = !!state.isCalendarGranted;
-  
-  const shouldDisableInputs = forceDisableAll || !isImageLoaded;
-  const shouldDisableAddButton = forceDisableAll || !isImageLoaded || !isCalendarGranted;
-  
-  el.eventTitle.disabled = shouldDisableInputs;
-  el.eventStartDate.disabled = shouldDisableInputs;
-  el.eventStartTime.disabled = shouldDisableInputs;
-  el.eventEndDate.disabled = shouldDisableInputs;
-  el.eventEndTime.disabled = shouldDisableInputs;
-  el.eventLocation.disabled = shouldDisableInputs;
-  el.eventDescription.disabled = shouldDisableInputs;
-  
-  el.btnAddCalendar.disabled = shouldDisableAddButton;
+  const disableInputs = forceDisableAll || !isImageLoaded;
+  const disableAdd = forceDisableAll || !isImageLoaded || !isCalendarGranted;
+
+  ['eventTitle', 'eventStartDate', 'eventStartTime', 'eventEndDate', 'eventEndTime', 'eventLocation', 'eventDescription'].forEach(k => {
+    if (el[k]) el[k].disabled = disableInputs;
+  });
+  if (el.btnAddCalendar) el.btnAddCalendar.disabled = disableAdd;
 }
 
-// トースト通知の表示
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  
-  let icon = 'info';
-  if (type === 'success') icon = 'check-circle';
-  if (type === 'error') icon = 'alert-triangle';
-  if (type === 'warning') icon = 'alert-circle';
-  
-  toast.innerHTML = `
-    <i data-lucide="${icon}"></i>
-    <span style="font-size: 0.9rem; font-weight: 500;">${message}</span>
-  `;
-  
+  toast.innerHTML = `<span style="font-size:0.9rem;font-weight:500;">${message}</span>`;
   el.toastContainer.appendChild(toast);
   if (typeof lucide !== 'undefined') lucide.createIcons();
-  
   setTimeout(() => {
     toast.classList.add('hide');
-    toast.addEventListener('animationend', () => {
-      toast.remove();
-    });
-  }, 4000);
+    toast.addEventListener('animationend', () => toast.remove());
+  }, 4500);
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
