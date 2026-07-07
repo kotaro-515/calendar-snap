@@ -4,9 +4,9 @@
 
 /* 1. 変数定義 & テーマ */
 :root {
-  --bg-base: #e8f4f8; /* 朝の砂浜のような淡いシーフォームブルー */
-  --bg-surface: #ffffff;
-  --bg-surface-hover: #f0fafc;
+  --bg-base: #cceeff; /* ターコイズブルーの海 */
+  --bg-surface: rgba(255, 255, 255, 0.82);
+  --bg-surface-hover: rgba(255, 255, 255, 0.92);
 
   --accent-primary: #0077b6;   /* 深い海のブルー */
   --accent-secondary: #e76f51; /* 夕暮れのサンセットコーラル */
@@ -62,29 +62,62 @@ body {
   position: relative;
 }
 
-/* 背景：砂浜と海のグラデーション */
+/* 背景：砂浜と海の写真風グラデーション */
+body {
+  background:
+    /* 波打ち際の白い泡 */
+    radial-gradient(ellipse 120% 18% at 55% 62%, rgba(255,255,255,0.82) 0%, transparent 100%),
+    /* ターコイズ〜深海グラデーション（上） */
+    linear-gradient(180deg,
+      #4ecdc4 0%,       /* 浅瀬のシアン */
+      #38b2c8 10%,      /* ターコイズ */
+      #1a9ab8 25%,      /* 深めのターコイズ */
+      #0e87a8 40%,      /* 海の中間 */
+      #a8dde8 52%,      /* 波打ち際手前の明るい水 */
+      #d6eff4 57%,      /* 波の白さ */
+      #eef8f9 62%,      /* 白波のピーク */
+      #dbeee8 67%,      /* 泡が砂にかかる */
+      #e8d8b8 73%,      /* 湿った砂 */
+      #e8cfa0 80%,      /* 砂浜 */
+      #dfc48e 90%,      /* 乾いた砂 */
+      #d4b87a 100%      /* 奥の砂浜 */
+    );
+  background-attachment: fixed;
+}
+
 body::before {
   content: '';
   position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 45%;
-  background: linear-gradient(180deg,
-    rgba(135, 206, 235, 0.18) 0%,
-    rgba(0, 180, 216, 0.06) 70%,
-    transparent 100%);
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* 光の揺らぎ・水面の輝き */
+  background:
+    radial-gradient(ellipse 60% 30% at 30% 15%, rgba(255,255,255,0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 20% at 70% 8%, rgba(200,245,255,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 8% at 50% 55%, rgba(255,255,255,0.55) 0%, transparent 100%);
   z-index: -1;
   pointer-events: none;
+  animation: water-shimmer 8s ease-in-out infinite alternate;
+}
+
+@keyframes water-shimmer {
+  0%   { opacity: 0.7; transform: scaleX(1); }
+  50%  { opacity: 1;   transform: scaleX(1.02); }
+  100% { opacity: 0.8; transform: scaleX(0.99); }
 }
 
 body::after {
   content: '';
   position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 30%;
-  background: linear-gradient(0deg,
-    rgba(244, 208, 153, 0.22) 0%,
-    rgba(231, 111, 81, 0.05) 60%,
-    transparent 100%);
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* さらに細かい波紋テクスチャ */
+  background:
+    repeating-linear-gradient(
+      175deg,
+      transparent 0px,
+      transparent 38px,
+      rgba(255,255,255,0.04) 38px,
+      rgba(255,255,255,0.04) 40px
+    );
   z-index: -1;
   pointer-events: none;
 }
@@ -92,8 +125,8 @@ body::after {
 /* 3. レイアウト */
 header {
   padding: 1.25rem 2rem;
-  border-bottom: 1px solid var(--border-color);
-  background: rgba(245, 242, 235, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(10, 130, 160, 0.55);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
@@ -113,17 +146,18 @@ header {
   font-size: 1.65rem;
   font-weight: 700;
   letter-spacing: -0.5px;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, #ffffff 0%, #caf0f8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
 }
 
 .logo-section p {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: rgba(210, 245, 255, 0.9);
   font-weight: 500;
   margin-top: 0.1rem;
 }
@@ -153,13 +187,16 @@ main {
 
 /* 4. コンポーネント */
 
-/* カード・パネル共通 (クレイモルフィズム風カード) */
+/* カード・パネル共通 (ガラスモルフィズム風カード) */
 .panel {
-  background: var(--bg-surface);
-  border: 1px solid rgba(45, 41, 38, 0.03);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: var(--radius-lg);
   padding: 2rem;
-  box-shadow: var(--shadow-clay-card);
+  box-shadow: 0 8px 32px rgba(0, 100, 150, 0.12),
+              inset 0 1px 0 rgba(255,255,255,0.8);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   transition: var(--transition);
   display: flex;
   flex-direction: column;
@@ -458,7 +495,7 @@ textarea {
 .user-name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-main);
+  color: #ffffff;
 }
 
 /* ローディング (北欧カラーのパルスアニメーション) */
