@@ -406,6 +406,35 @@ app.post('/api/calendar/add', async (req, res) => {
   }
 });
 
+// ==========================================
+// 4. Google カレンダー予定削除 API
+// ==========================================
+app.delete('/api/calendar/delete', async (req, res) => {
+  if (!req.session.tokens) {
+    return res.status(401).json({ error: '認証が必要です' });
+  }
+
+  const { eventId } = req.body;
+  if (!eventId) {
+    return res.status(400).json({ error: 'eventIdが必要です' });
+  }
+
+  if (USE_MOCK_AUTH) {
+    return res.json({ success: true });
+  }
+
+  try {
+    const oauth2Client = createOAuth2Client();
+    oauth2Client.setCredentials(req.session.tokens);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    await calendar.events.delete({ calendarId: 'primary', eventId });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Calendar Delete Error:', error);
+    res.status(500).json({ error: error.message || '削除に失敗しました' });
+  }
+});
+
 // その他のルートはフロントエンドにリダイレクト
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

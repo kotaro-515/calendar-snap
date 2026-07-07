@@ -275,10 +275,11 @@ async function analyzeImage() {
   if (!state.selectedImageBase64) return;
 
   state.analysisError = false;
-  el.loader.style.display = 'flex';
+  el.loader.style.display = 'none'; // 水泡オーバーレイで代替
   el.eventForm.style.opacity = '0.4';
   if (el.eventsList) el.eventsList.style.display = 'none';
   updateFormDisabledState(true);
+  showBubbleOverlay();
   startLoadingAnimation();
 
   try {
@@ -317,6 +318,7 @@ async function analyzeImage() {
     updateFormDisabledState();
   } finally {
     stopLoadingAnimation();
+    hideBubbleOverlay();
     el.loader.style.display = 'none';
     el.eventForm.style.opacity = '1';
   }
@@ -404,7 +406,7 @@ async function addEventToGoogleCalendar() {
 
     launchConfetti();
     showToast('🎉 カレンダーに登録しました！', 'success');
-    saveToHistory({ summary, location, startDate, startTime, endDate, endTime });
+    saveToHistory({ summary, location, startDate, startTime, endDate, endTime, eventId: createdEvent.id || null });
 
     if (createdEvent.htmlLink) {
       setTimeout(() => {
@@ -450,16 +452,49 @@ function renderHistory() {
   if (!el.historySection || !el.historyList) return;
   if (history.length === 0) { el.historySection.style.display = 'none'; return; }
   el.historySection.style.display = 'block';
-  el.historyList.innerHTML = history.map(item => {
+  el.historyList.innerHTML = '';
+
+  history.forEach((item, index) => {
     const added = new Date(item.addedAt);
     const dateStr = `${added.getMonth() + 1}/${added.getDate()} ${added.getHours()}:${String(added.getMinutes()).padStart(2, '0')}`;
-    return `
-      <div class="history-item">
-        <div class="history-item-title">${escapeHtml(item.summary)}</div>
-        <div class="history-item-date">📅 ${item.startDate} ${item.startTime}</div>
-        <div class="history-item-added">✓ ${dateStr} に登録</div>
-      </div>`;
-  }).join('');
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <div class="history-item-title">${escapeHtml(item.summary)}</div>
+      <div class="history-item-date">📅 ${item.startDate} ${item.startTime}</div>
+      <div class="history-item-added">✓ ${dateStr} に登録</div>
+      ${item.eventId ? `<button class="history-delete-btn" title="カレンダーから削除">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>` : ''}
+    `;
+    if (item.eventId) {
+      div.querySelector('.history-delete-btn').addEventListener('click', () => deleteCalendarEvent(item.eventId, index));
+    }
+    el.historyList.appendChild(div);
+  });
+}
+
+async function deleteCalendarEvent(eventId, index) {
+  if (!confirm('このカレンダーの予定を削除しますか？')) return;
+  try {
+    const res = await fetch('/api/calendar/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || '削除に失敗しました');
+    }
+    // 履歴からも削除
+    const history = loadHistoryData();
+    history.splice(index, 1);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+    showToast('🗑️ カレンダーから削除しました', 'success');
+  } catch (error) {
+    showToast(`削除エラー: ${error.message}`, 'error');
+  }
 }
 
 function clearHistory() {
@@ -480,7 +515,47 @@ function updateCounter() {
 }
 
 // ==========================================
-// 9. ローディングアニメーション
+// 9. 水泡オーバーレイ
+// ==========================================
+function showBubbleOverlay() {
+  const overlay = document.getElementById('bubble-overlay');
+  if (!overlay) return;
+
+  // 既存の水泡をクリア
+  overlay.querySelectorAll('.bubble').forEach(b => b.remove());
+
+  // 水泡を生成
+  for (let i = 0; i < 35; i++) {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    const size = Math.random() * 45 + 8;
+    bubble.style.setProperty('--duration', `${Math.random() * 3 + 2.5}s`);
+    bubble.style.setProperty('--delay', `${Math.random() * 5}s`);
+    bubble.style.cssText += `
+      left: ${Math.random() * 100}%;
+      width: ${size}px;
+      height: ${size}px;
+    `;
+    overlay.appendChild(bubble);
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function hideBubbleOverlay() {
+  const overlay = document.getElementById('bubble-overlay');
+  if (!overlay) return;
+  overlay.style.opacity = '0';
+  overlay.style.transition = 'opacity 0.5s ease';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+  }, 500);
+}
+
+// ==========================================
+// 10. ローディングアニメーション
 // ==========================================
 function startLoadingAnimation() {
   const stepEls = ['step-1', 'step-2', 'step-3', 'step-4'].map(id => document.getElementById(id));
@@ -501,17 +576,27 @@ function startLoadingAnimation() {
     if (stepIndex < stepEls.length - 1) stepIndex++;
   }, 1800);
 
+  const bubbleText = document.getElementById('bubble-loading-text');
+  const bubbleProgress = document.getElementById('bubble-progress');
+
   const textTimer = setInterval(() => {
-    if (el.loadingText) {
-      el.loadingText.style.opacity = '0';
-      setTimeout(() => {
-        tipIndex = (tipIndex + 1) % LOADING_TIPS.length;
-        if (el.loadingText) { el.loadingText.textContent = LOADING_TIPS[tipIndex]; el.loadingText.style.opacity = '1'; }
-      }, 300);
-    }
+    tipIndex = (tipIndex + 1) % LOADING_TIPS.length;
+    const msg = LOADING_TIPS[tipIndex];
+    [el.loadingText, bubbleText].forEach(t => {
+      if (!t) return;
+      t.style.opacity = '0';
+      setTimeout(() => { t.textContent = msg; t.style.opacity = '1'; }, 300);
+    });
   }, 2200);
 
   if (el.loadingText) el.loadingText.textContent = LOADING_TIPS[0];
+  if (bubbleText) bubbleText.textContent = LOADING_TIPS[0];
+  if (bubbleProgress) {
+    const bpTimer = setInterval(() => {
+      if (progress < 88 && bubbleProgress) bubbleProgress.style.width = `${Math.min(progress, 88)}%`;
+    }, 450);
+    loadingTimers.push(bpTimer);
+  }
   loadingTimers = [progressTimer, stepTimer, textTimer];
 }
 
