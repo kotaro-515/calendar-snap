@@ -506,13 +506,7 @@ function clearHistory() {
 // ==========================================
 // 8. 登録カウンター
 // ==========================================
-function updateCounter() {
-  const badge = document.getElementById('counter-badge');
-  if (!badge) return;
-  if (state.totalRegistered === 0) { badge.style.display = 'none'; return; }
-  badge.style.display = 'inline-flex';
-  badge.textContent = `🎯 ${state.totalRegistered}件登録済み`;
-}
+function updateCounter() {}
 
 // ==========================================
 // 9. 水泡オーバーレイ

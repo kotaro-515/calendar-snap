@@ -645,17 +645,6 @@ textarea {
   to { transform: translateY(100px); opacity: 0; }
 }
 
-/* 登録カウンターバッジ */
-.counter-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  background: rgba(77, 124, 15, 0.12);
-  color: var(--accent-secondary);
-  border: 1.5px solid rgba(77, 124, 15, 0.2);
-  white-space: nowrap;
-}
 
 /* ステップインジケーター */
 .step-indicator {
