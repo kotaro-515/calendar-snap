@@ -1,47 +1,46 @@
 /* ==========================================
-   Calendar Snap - Warm Sand & Clay Theme
+   Calendar Snap - Ocean Beach Theme
    ========================================== */
 
 /* 1. 変数定義 & テーマ */
 :root {
-  --bg-base: #f5f2eb; /* 北欧の無垢材や漆喰を思わせる、温かみのあるサンドベージュ */
-  --bg-surface: #ffffff; /* クリーンなホワイトで清潔感を対比 */
-  --bg-surface-hover: #faf9f6;
-  
-  --accent-primary: #c2410c; /* 温かみのあるテラコッタ（レンガ色） */
-  --accent-secondary: #4d7c0f; /* 優しいセージグリーン（オリーブ） */
-  --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, #b45309 50%, var(--accent-secondary) 100%);
-  --accent-glow: 0 8px 24px rgba(194, 65, 12, 0.12);
-  
-  --text-main: #2d2926; /* 完全な黒を避け、温もりを感じる極深チャコールブラウン */
-  --text-muted: #78716c; /* ストーンベージュの優しいミュートカラー */
+  --bg-base: #e8f4f8; /* 朝の砂浜のような淡いシーフォームブルー */
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0fafc;
+
+  --accent-primary: #0077b6;   /* 深い海のブルー */
+  --accent-secondary: #e76f51; /* 夕暮れのサンセットコーラル */
+  --accent-gradient: linear-gradient(135deg, #0077b6 0%, #0096c7 50%, #00b4d8 100%);
+  --accent-glow: 0 8px 24px rgba(0, 119, 182, 0.18);
+
+  --text-main: #1a3a4a;   /* 深海ネイビー */
+  --text-muted: #5d8494;  /* 霞がかった海の色 */
   --text-inverse: #ffffff;
-  
-  --border-color: rgba(45, 41, 38, 0.08);
-  --border-color-focus: rgba(194, 65, 12, 0.4);
-  
-  --success: #15803d; /* ソフトなフォレストグリーン */
-  --error: #b91c1c; /* 温かみのある朱赤 */
-  --warning: #b45309; /* 琥珀色 */
-  
+
+  --border-color: rgba(0, 119, 182, 0.1);
+  --border-color-focus: rgba(0, 119, 182, 0.45);
+
+  --success: #2a9d8f; /* シーグリーン */
+  --error: #e63946;
+  --warning: #f4a261; /* サンドオレンジ */
+
   --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  --radius-lg: 24px; /* ぷっくり感を強調するための大きめの角丸 */
+  --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 10px;
-  
-  /* クレイモルフィズム用のソフトな影システム */
-  --shadow-clay-card: 12px 12px 24px rgba(45, 41, 38, 0.04), 
-                      -12px -12px 24px #ffffff, 
-                      inset 4px 4px 8px rgba(255, 255, 255, 0.6);
-  --shadow-clay-btn: 6px 6px 12px rgba(194, 65, 12, 0.15), 
-                     -6px -6px 12px #ffffff, 
-                     inset 2px 2px 4px rgba(255, 255, 255, 0.4);
-  --shadow-clay-btn-active: inset 3px 3px 6px rgba(194, 65, 12, 0.2), 
+
+  --shadow-clay-card: 12px 12px 24px rgba(0, 119, 182, 0.05),
+                      -12px -12px 24px #ffffff,
+                      inset 4px 4px 8px rgba(255, 255, 255, 0.7);
+  --shadow-clay-btn: 6px 6px 12px rgba(0, 119, 182, 0.18),
+                     -6px -6px 12px #ffffff,
+                     inset 2px 2px 4px rgba(255, 255, 255, 0.5);
+  --shadow-clay-btn-active: inset 3px 3px 6px rgba(0, 119, 182, 0.2),
                             inset -3px -3px 6px #ffffff;
-  --shadow-clay-input: inset 2px 2px 5px rgba(45, 41, 38, 0.05), 
+  --shadow-clay-input: inset 2px 2px 5px rgba(0, 119, 182, 0.04),
                        inset -2px -2px 5px #ffffff,
-                       1px 1px 0px rgba(255, 255, 255, 0.8);
-                       
+                       1px 1px 0px rgba(255, 255, 255, 0.9);
+
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -63,27 +62,29 @@ body {
   position: relative;
 }
 
-/* 背景グラデーション球 (ウォームカラー調整) */
+/* 背景：砂浜と海のグラデーション */
 body::before {
   content: '';
-  position: absolute;
-  top: -10%;
-  left: -10%;
-  width: 50%;
-  height: 50%;
-  background: radial-gradient(circle, rgba(194, 65, 12, 0.06) 0%, transparent 70%);
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 45%;
+  background: linear-gradient(180deg,
+    rgba(135, 206, 235, 0.18) 0%,
+    rgba(0, 180, 216, 0.06) 70%,
+    transparent 100%);
   z-index: -1;
   pointer-events: none;
 }
 
 body::after {
   content: '';
-  position: absolute;
-  bottom: -10%;
-  right: -10%;
-  width: 50%;
-  height: 50%;
-  background: radial-gradient(circle, rgba(77, 124, 15, 0.05) 0%, transparent 70%);
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 30%;
+  background: linear-gradient(0deg,
+    rgba(244, 208, 153, 0.22) 0%,
+    rgba(231, 111, 81, 0.05) 60%,
+    transparent 100%);
   z-index: -1;
   pointer-events: none;
 }
@@ -363,14 +364,14 @@ textarea {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%);
   color: #ffffff;
   box-shadow: var(--shadow-clay-btn);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 8px 8px 16px rgba(194, 65, 12, 0.22), 
+  box-shadow: 8px 8px 16px rgba(0, 119, 182, 0.25),
               -6px -6px 12px #ffffff;
   opacity: 0.95;
 }
@@ -1033,6 +1034,40 @@ textarea {
 @keyframes shimmer-progress {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ダイバーキャラクター */
+.bubble-diver {
+  position: absolute;
+  z-index: 6;
+  top: 38%;
+  left: 0;
+  font-size: 3.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 180, 255, 0.5));
+  animation:
+    diver-swim  14s linear infinite,
+    diver-kick  0.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes diver-swim {
+  0%    { transform: translate(-100px,  0px)  scaleX(1); }
+  12%   { transform: translate(15vw,  -50px)  scaleX(1); }
+  25%   { transform: translate(32vw,   20px)  scaleX(1); }
+  38%   { transform: translate(55vw,  -35px)  scaleX(1); }
+  49%   { transform: translate(calc(100vw + 100px), 10px) scaleX(1); }
+  50%   { transform: translate(calc(100vw + 100px), 10px) scaleX(-1); }
+  62%   { transform: translate(72vw,  -20px)  scaleX(-1); }
+  75%   { transform: translate(48vw,   40px)  scaleX(-1); }
+  88%   { transform: translate(22vw,  -15px)  scaleX(-1); }
+  99%   { transform: translate(-100px,  0px)  scaleX(-1); }
+  100%  { transform: translate(-100px,  0px)  scaleX(1); }
+}
+
+@keyframes diver-kick {
+  0%, 100% { margin-top: 0; }
+  50%      { margin-top: -14px; }
 }
 
 /* 水泡 */
