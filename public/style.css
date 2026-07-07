@@ -62,63 +62,48 @@ body {
   position: relative;
 }
 
-/* 背景：砂浜と海の写真風グラデーション */
-body {
-  background:
-    /* 波打ち際の白い泡 */
-    radial-gradient(ellipse 120% 18% at 55% 62%, rgba(255,255,255,0.82) 0%, transparent 100%),
-    /* ターコイズ〜深海グラデーション（上） */
-    linear-gradient(180deg,
-      #4ecdc4 0%,       /* 浅瀬のシアン */
-      #38b2c8 10%,      /* ターコイズ */
-      #1a9ab8 25%,      /* 深めのターコイズ */
-      #0e87a8 40%,      /* 海の中間 */
-      #a8dde8 52%,      /* 波打ち際手前の明るい水 */
-      #d6eff4 57%,      /* 波の白さ */
-      #eef8f9 62%,      /* 白波のピーク */
-      #dbeee8 67%,      /* 泡が砂にかかる */
-      #e8d8b8 73%,      /* 湿った砂 */
-      #e8cfa0 80%,      /* 砂浜 */
-      #dfc48e 90%,      /* 乾いた砂 */
-      #d4b87a 100%      /* 奥の砂浜 */
-    );
-  background-attachment: fixed;
+/* html に土台色（SVGテクスチャが透けて見えるよう body は transparent） */
+html {
+  background: #1a9cb8;
 }
 
+/* 背景：SVGテクスチャに任せる */
+body {
+  background: transparent;
+}
+
+/* 水面の光の揺らぎオーバーレイ */
 body::before {
   content: '';
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  /* 光の揺らぎ・水面の輝き */
+  top: 0; left: 0; right: 0;
+  height: 60%;
   background:
-    radial-gradient(ellipse 60% 30% at 30% 15%, rgba(255,255,255,0.22) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 20% at 70% 8%, rgba(200,245,255,0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 8% at 50% 55%, rgba(255,255,255,0.55) 0%, transparent 100%);
-  z-index: -1;
+    radial-gradient(ellipse 70% 35% at 25% 20%, rgba(255,255,255,0.18) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 25% at 75% 10%, rgba(180,240,255,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 15% at 50% 45%, rgba(255,255,255,0.22) 0%, transparent 100%);
+  z-index: -2;
   pointer-events: none;
-  animation: water-shimmer 8s ease-in-out infinite alternate;
+  animation: water-shimmer 9s ease-in-out infinite alternate;
 }
 
 @keyframes water-shimmer {
-  0%   { opacity: 0.7; transform: scaleX(1); }
-  50%  { opacity: 1;   transform: scaleX(1.02); }
-  100% { opacity: 0.8; transform: scaleX(0.99); }
+  0%   { opacity: 0.6; transform: scaleX(1)    translateY(0); }
+  50%  { opacity: 1;   transform: scaleX(1.03) translateY(-4px); }
+  100% { opacity: 0.75; transform: scaleX(0.98) translateY(2px); }
 }
 
+/* 砂浜エリアの温かみオーバーレイ */
 body::after {
   content: '';
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  /* さらに細かい波紋テクスチャ */
-  background:
-    repeating-linear-gradient(
-      175deg,
-      transparent 0px,
-      transparent 38px,
-      rgba(255,255,255,0.04) 38px,
-      rgba(255,255,255,0.04) 40px
-    );
-  z-index: -1;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(0deg,
+    rgba(185, 140, 60, 0.22) 0%,
+    rgba(210, 175, 100, 0.12) 50%,
+    transparent 100%);
+  z-index: -2;
   pointer-events: none;
 }
 

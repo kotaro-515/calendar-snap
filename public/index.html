@@ -19,6 +19,101 @@
 </head>
 <body>
 
+  <!-- ========== 背景テクスチャSVG ========== -->
+  <svg id="bg-texture" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+       style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-3;pointer-events:none;">
+    <defs>
+      <!-- 水面ノイズ（深さと波紋） -->
+      <filter id="water-filter" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="turbulence" baseFrequency="0.022 0.065" numOctaves="7" seed="4" result="noise"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.02
+                  0 0 0 0 0.48
+                  0 0 0 0 0.68
+                  0 0 0 0.42 0" in="noise" result="tinted"/>
+        <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="tinted"/></feMerge>
+      </filter>
+      <!-- 砂粒ノイズ（細かい砂の粒感） -->
+      <filter id="sand-filter" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <!-- 粗い砂の層 -->
+        <feTurbulence type="fractalNoise" baseFrequency="0.55 0.52" numOctaves="3" seed="9" result="coarse"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.55
+                  0 0 0 0 0.40
+                  0 0 0 0 0.15
+                  0 0 0 0.45 0" in="coarse" result="coarse-sand"/>
+        <!-- 細かい砂の層 -->
+        <feTurbulence type="fractalNoise" baseFrequency="1.2 1.1" numOctaves="2" seed="13" result="fine"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.72
+                  0 0 0 0 0.58
+                  0 0 0 0 0.28
+                  0 0 0 0.3 0" in="fine" result="fine-sand"/>
+        <feMerge>
+          <feMergeNode in="SourceGraphic"/>
+          <feMergeNode in="coarse-sand"/>
+          <feMergeNode in="fine-sand"/>
+        </feMerge>
+      </filter>
+      <!-- 波打ち際の泡（不規則な白い泡） -->
+      <filter id="foam-filter" x="-5%" y="-50%" width="110%" height="200%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.028 0.095" numOctaves="6" seed="7" result="foam-noise"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 1
+                  0 0 0 0 1
+                  0 0 0 0 1
+                  0 0 0 0.78 0" in="foam-noise" result="white-foam"/>
+        <feGaussianBlur stdDeviation="2.5" in="white-foam" result="blurred-foam"/>
+        <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="blurred-foam"/></feMerge>
+      </filter>
+      <!-- 水グラデーション -->
+      <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#43c6c2"/>
+        <stop offset="25%"  stop-color="#1a9cb8"/>
+        <stop offset="55%"  stop-color="#0d89aa"/>
+        <stop offset="78%"  stop-color="#72cce0"/>
+        <stop offset="100%" stop-color="#b8e8f0"/>
+      </linearGradient>
+      <!-- 波打ち際グラデーション -->
+      <linearGradient id="foam-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#c8eef5" stop-opacity="0"/>
+        <stop offset="30%"  stop-color="#e8f8fc" stop-opacity="0.9"/>
+        <stop offset="50%"  stop-color="#ffffff" stop-opacity="1"/>
+        <stop offset="70%"  stop-color="#dff0eb" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="#d8e8d8" stop-opacity="0"/>
+      </linearGradient>
+      <!-- 砂グラデーション -->
+      <linearGradient id="sand-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#cce8de"/>
+        <stop offset="12%"  stop-color="#dfd8b8"/>
+        <stop offset="40%"  stop-color="#e8cfa0"/>
+        <stop offset="75%"  stop-color="#ddc08a"/>
+        <stop offset="100%" stop-color="#cfaa72"/>
+      </linearGradient>
+      <!-- 光コースティクス（水中の光の屈折） -->
+      <filter id="caustic-filter" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="turbulence" baseFrequency="0.038 0.018" numOctaves="4" seed="2" result="c-noise">
+          <animate attributeName="baseFrequency" values="0.038 0.018;0.042 0.022;0.038 0.018" dur="10s" repeatCount="indefinite"/>
+        </feTurbulence>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.75
+                  0 0 0 0 0.97
+                  0 0 0 0 1
+                  0 0 0 0.22 0" in="c-noise" result="caustic-color"/>
+        <feComposite in="caustic-color" in2="SourceGraphic" operator="over"/>
+      </filter>
+    </defs>
+
+    <!-- 水エリア（上65%） -->
+    <rect x="0" y="0" width="100%" height="65%" fill="url(#water-grad)" filter="url(#water-filter)"/>
+    <!-- コースティクス（光の揺らぎ） -->
+    <rect x="0" y="0" width="100%" height="45%" fill="rgba(150,230,255,0.08)" filter="url(#caustic-filter)"/>
+    <!-- 波打ち際の泡（55〜72%） -->
+    <rect x="0" y="55%" width="100%" height="18%" fill="url(#foam-grad)" filter="url(#foam-filter)"/>
+    <!-- 砂エリア（62〜100%） -->
+    <rect x="0" y="62%" width="100%" height="38%" fill="url(#sand-grad)" filter="url(#sand-filter)"/>
+  </svg>
+
   <!-- ヘッダー -->
   <header>
     <div class="header-container">
